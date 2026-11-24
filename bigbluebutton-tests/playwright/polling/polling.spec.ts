@@ -109,6 +109,10 @@ test.describe.parallel('Polling', { tag: '@ci' }, () => {
       await polling.parentheticalQuestionTypedResponse();
     });
 
+    test('Footer text is not a quick poll option', async () => {
+      await polling.footerTextIsNotAQuickPollOption();
+    });
+
     test('Hiding pools - Poll anywhere in the slide', async () => {
       await polling.pollAnywhereSlide();
     });

@@ -255,10 +255,14 @@ const QuickPollDropdown = (props) => {
     const isLastInteger = /^\d+$/.test(lastToken);
     const isCurrentInteger = /^\d+$/.test(currentToken);
 
+    // A label only continues the current group when it is the next one in
+    // sequence (2 after 1, b after a). Anything else, such as "13" from a
+    // "13. November" date or "S" from an "S. 3" page footer after "b)",
+    // starts a new group, which is dropped below if it stays a single option.
     if (isLastInteger === isCurrentInteger) {
       if (isLastInteger) {
         // Number
-        if (parseInt(currentToken, 10) > parseInt(lastToken, 10)) {
+        if (parseInt(currentToken, 10) === parseInt(lastToken, 10) + 1) {
           options.push(currentValue);
           lastElementWithLabels.push(optionsWithLabels.shift());
         } else {
@@ -269,7 +273,8 @@ const QuickPollDropdown = (props) => {
         }
       } else {
         // Alphabet
-        if (currentToken.toLowerCase().charCodeAt(0) > lastToken.toLowerCase().charCodeAt(0)) {
+        if (currentToken.toLowerCase().charCodeAt(0)
+          === lastToken.toLowerCase().charCodeAt(0) + 1) {
           options.push(currentValue);
           lastElementWithLabels.push(optionsWithLabels.shift());
         } else {

@@ -549,6 +549,49 @@ export class Polling extends MultiUsers {
     ).not.toHaveValue(/longfor/, { timeout: ELEMENT_WAIT_TIME });
   }
 
+  // Regression test for the footer case reviewed in #26669: a slide footer must not add an option
+  // to the quick poll. "13. November 2025" used to be taken as option 13 after "1. Ja / 2. Nein",
+  // and "S. 3" (a page reference) as option S after "a) Rot / b) Blau". An option label now only
+  // continues the group when it is the next one in sequence (2 after 1, b after a).
+  async footerTextIsNotAQuickPollOption() {
+    await this.modPage.waitForSelector(e.whiteboard, ELEMENT_WAIT_LONGER_TIME);
+    await util.uploadSPresentationForTestingPolls(this.modPage, e.smartSlidesFooterLabels);
+    // join-sync barrier: the participants panel is closed by default on 4.0,
+    // so open it before asserting the attendee's list item
+    await this.userPage.waitAndClick(e.usersListSidebarButton);
+    await this.userPage.hasElement(e.userListItem, 'should display the user list item for the attendee');
+    await this.modPage.closeAllToastNotifications();
+
+    const slides = [
+      { slide: 1, options: [/Ja/, /Nein/], footer: '"13. November 2025"' },
+      { slide: 2, options: [/Rot/, /Blau/], footer: '"S. 3"' },
+    ];
+    for (const { slide, options, footer } of slides) {
+      await util.goToSlide(this.modPage, slide);
+      await this.modPage.hasElement(
+        e.quickPoll,
+        'should display the quick poll button once the smart slides deck is converted',
+        ELEMENT_WAIT_EXTRA_LONG_TIME,
+      );
+      await this.modPage.waitAndClick(e.quickPoll, ELEMENT_WAIT_LONGER_TIME);
+      await this.modPage.waitAndClick(e.startPoll);
+      await this.userPage.hasElement(e.pollingContainer, 'should display the poll question after quick poll starts');
+      const answerButtons = this.userPage.page.locator(e.pollAnswerOptionBtn);
+      await expect(
+        answerButtons,
+        `slide ${slide}: the quick poll should have 2 options, not one more from the ${footer} footer`,
+      ).toHaveCount(options.length, { timeout: ELEMENT_WAIT_TIME });
+      for (const [index, text] of options.entries()) {
+        await expect(answerButtons.nth(index), `slide ${slide}: option ${index + 1}`).toContainText(text);
+      }
+      await this.modPage.waitAndClick(e.cancelPollBtn);
+      await this.userPage.wasRemoved(
+        e.pollingContainer,
+        'should not display the polling container after the poll is canceled',
+      );
+    }
+  }
+
   async pollResultsOnChat() {
     const { pollChatMessage } = this.modPage.settings || {};
 
